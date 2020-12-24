@@ -1,4 +1,4 @@
-# Voice Assistant v 1.2
+# Voice Assistant v 1.3
 from pyowm import OWM
 from pyowm.utils.config import get_default_config
 import pyttsx3
@@ -11,22 +11,16 @@ import speech_recognition as sr
 from fuzzywuzzy import fuzz
 from colorama import *
 
-# раздел глобальных переменных
-# Погода
-
 
 class Assistant:
 
     def __init__(self):
         config_dict = get_default_config()
         config_dict['language'] = 'ru'
-
-        self.place = "Харьков"
         owm = OWM('fd5321547e631b45b33d6d1cc673754f')
         mgr = owm.weather_manager()
         self.observation = mgr.weather_at_place('Харьков')
         self.w = self.observation.weather
-
         self.status = self.w.detailed_status               # 'clouds'
         self.w.wind()                                 # {'speed': 4.6, 'deg': 330}
         self.humidity = self.w.humidity                    # 87
@@ -34,33 +28,42 @@ class Assistant:
         # w.rain                                 # {}
         self.heat_index = self.w.heat_index                # None
         self.clouds = self.w.clouds                        # 75
-
+        self.place = "Харьков"
         self.r = sr.Recognizer()
         self.engine = pyttsx3.init()
-
-        self.task = ''
-        self.text = ''
-        self.adress = ''
+        self.adress = []
+        self.tallys = []
         self.j = 0
+        self.x = 0
         self.task_number = 0
-        self.x = ''
 
-    ndel = ['морган', 'морген', 'морг', 'моргэн', 'морда',
-            'ладно', 'не могла бы ты', 'пожалуйста', 'сколько', 'текущее', 'сейчас']
+        self.ndel = ['морган', 'морген', 'морг', 'моргэн', 'морда',
+                     'ладно', 'не могла бы ты', 'пожалуйста', 'сколько', 'текущее', 'сейчас']
+
+        self.commands = ['привет',
+                         'выключи комп', 'выруби компьютер',
+                         'пока',
+                         'покажи список команд',
+                         'выключи компьютер', 'выключай компьютер',
+                         'вырубись', 'отключись',
+                         'подбрось монетку', 'подкинь монетку', 'кинь монетку',
+                         'открой vk', 'открой браузер', 'включи vk', 'открой интернет', 'открой youtube',
+                         'включи музон',
+                         'открой viber', 'включи viber', 'открывай viber',
+                         'найди', 'найти', 'ищи', 'кто такой',
+                         'как дела', 'как жизнь', 'как настроение', 'как ты',
+                         'открой лаунчер аризоны', 'запусти лаунчер аризоны', 'запускай лаунчер аризоны',
+                         'включай лаунчер аризоны', 'заходи на аризону', 'включай аризону',
+                         'текущее время', 'сколько времени', 'сколько время', 'сейчас времени', 'который час',
+                         'крути винилы', 'крути винил',
+                         'какая погода', 'погода', 'погода на улице', 'какая погода на улице',
+                         'история запросов', 'выведи историю запросов', 'покажи историю запросов',
+                         'открой музыку', 'вруби музыку',
+                         'переведи',
+                         'планы', 'на будущее', 'что планируется',
+                         'открой протокол разработки', 'протокол разработки', ]
 
     # раздел описания функций комманд
-    def clear_analis(self):  # очистка файла с историей запросов
-        file = open('commands.txt', 'w', encoding='UTF-8')
-        file.close()
-        self.engine.say('Файл аналитики очищен!')
-
-    def add_file(self, x):
-        self.is_not_used()
-        file = open('commands.txt', 'a', encoding='UTF-8')
-        if x != '':
-            file.write(x + '\n')
-        file.close()
-
     def plans(self):
         self.engine.say('Моя задача будет заключаться в помощи в управлении компьютером'
                         'На данный момент ведется работа над виртуальной частью программного обеспечения'
@@ -69,38 +72,20 @@ class Assistant:
                         'И сделать уровни допуска к командам'
                         'В конечном итоге моя цель будет достигнута')
 
-    def comparison(self):  # осуществляет поиск самой подходящей под запрос функции
-        commands = ['привет', 'добрый вечер', 'доброе утро', 'добрый день',
-                    'выключи комп', 'выруби компьютер',
-                    'пока',
-                    'покажи список команд',
-                    'выключи компьютер', 'выключай компьютер',
-                    'вырубись', 'отключись',
-                    'подбрось монетку', 'подкинь монетку', 'кинь монетку',
-                    'открой vk', 'открой браузер', 'включи vk', 'открой интернет', 'открой youtube', 'включи музон',
-                    'открой viber', 'включи viber', 'открывай viber',
-                    'найди', 'найти', 'ищи', 'кто такой',
-                    'как дела', 'как жизнь', 'как настроение', 'как ты',
-                    'открой лаунчер аризоны', 'запусти лаунчер аризоны', 'запускай лаунчер аризоны',
-                    'включай лаунчер аризоны', 'заходи на аризону', 'включай аризону',
-                    'текущее время', 'сколько времени', 'сколько время', 'сейчас времени', 'который час',
-                    'крути винилы', 'крути винил',
-                    'какая погода', 'погода', 'погода на улице', 'какая погода на улице',
-                    'история запросов', 'выведи историю запросов', 'покажи историю запросов',
-                    'открой музыку', 'вруби музыку',
-                    'переведи',
-                    'планы', 'на будущее', 'что планируется',
-                    'открой протокол разработки', 'протокол разработки', ]
+    def comparison(self, *args):  # осуществляет поиск самой подходящей под запрос функции
+        self.j = args
+        self.x = args
+        self.commands = args
+        commands = []
+        x = 0
         ans = ''
+        j = 0
         for i in range(len(commands)):
-            k = fuzz.ratio(self.x, commands[i])
-            if (k > 50) & (k > self.j):
+            k = fuzz.ratio(x, commands[i])
+            if (k > 50) & (k > j):
                 ans = commands[i]
-                self.j = k
-        return str(ans)
-
-    def is_not_used(self):
-        pass
+        if (ans != 'пока') & (ans != 'привет'):
+            return str(ans)
 
     def show_cmds(self):  # выводит на экран список доступных комманд
         self.is_not_used()
@@ -109,44 +94,48 @@ class Assistant:
                   'покажи cтатистику', 'сколько время', 'какая погода']
         for i in my_com:
             print(i)
-        time.sleep(1)
+        time.sleep(2)
+
+    def is_not_used(self):
+        pass
 
     def protocol(self):
         self.engine.say('Протокол разработки открыт')
         os.startfile('C:/Users/Ruslan/PycharmProjects/Voice_Assistant/protocol.txt')
 
     def web_search(self):
+        task = ''
         mas = ['пожалуйста', 'давай', 'морган']
         keys = ('найди', 'найти', 'ищи', 'кто такой')
         k = ['Вот что я нашла по вашему запросу', 'Вот что мне удалось найти', 'Вот что я нашла']
+        text = ''
         for i in mas:
-            self.task = self.task.replace(i, '')
-            self.task = self.task.replace(' ', ' ')
-        self.task = self.task.strip()
+            task = task.replace(i, '')
+            task = task.replace(' ', ' ')
+        task = task.strip()
         for i in keys:
-            if i in self.task:
-                self.task = 'найди'
-        if 'найди' in self.text:
-            zapros = self.text.replace('найди', '').strip()
+            if i in task:
+                task = 'найди'
+        if 'найди' in text:
+            zapros = text.replace('найди', '').strip()
             webbrowser.open(f'https://www.google.com/search?q={zapros}&oq={zapros}'
                             f'81&aqs=chrome..69i57j46i131i433j0l5.2567j0j7&sourceid=chrome&ie=UTF-8')
             self.engine.say(random.choice(k))
 
-        elif 'найти' in self.text:
-            zapros = self.text.replace('найти', '').strip()
-            webbrowser.open(f'https://www.google.com/search?q={zapros}&oq={zapros}'
-                            f'81&aqs=chrome..69i57j46i131i433j0l5.2567j0j7&sourceid=chrome&ie=UTF-8')
-
-            self.engine.say(random.choice(k))
-
-        elif 'ищи' in self.text:
-            zapros = self.text.replace('ищи', '').strip()
+        elif 'найти' in text:
+            zapros = text.replace('найти', '').strip()
             webbrowser.open(f'https://www.google.com/search?q={zapros}&oq={zapros}'
                             f'81&aqs=chrome..69i57j46i131i433j0l5.2567j0j7&sourceid=chrome&ie=UTF-8')
             self.engine.say(random.choice(k))
 
-        elif 'кто такой' in self.text:
-            zapros = self.text.replace('кто такой', '').strip()
+        elif 'ищи' in text:
+            zapros = text.replace('ищи', '').strip()
+            webbrowser.open(f'https://www.google.com/search?q={zapros}&oq={zapros}'
+                            f'81&aqs=chrome..69i57j46i131i433j0l5.2567j0j7&sourceid=chrome&ie=UTF-8')
+            self.engine.say(random.choice(k))
+
+        elif 'кто такой' in text:
+            zapros = text.replace('кто такой', '').strip()
             webbrowser.open(f'https://www.google.com/search?q={zapros}&oq={zapros}'
                             f'81&aqs=chrome..69i57j46i131i433j0l5.2567j0j7&sourceid=chrome&ie=UTF-8')
             self.engine.say(random.choice(k))
@@ -160,23 +149,25 @@ class Assistant:
         k = ["Выпал Орёл", "Выпала Решка"]
         self.engine.say(random.choice(k))
 
-    def clear_task(self):  # удаляет ключевые слова
+    def clear_task(self, text):  # удаляет ключевые слова
+        ndel = ['морган', 'морген', 'морг', 'моргэн', 'морда',
+                'ладно', 'не могла бы ты', 'пожалуйста', 'сколько', 'текущее', 'сейчас']
         self.is_not_used()
-        for z in self.ndel:
-            self.text = self.text.replace(z, '').strip()
-            self.text = self.text.replace('  ', ' ').strip()
+        for z in ndel:
+            text = text.replace(z, '').strip()
+            text = text.replace('  ', ' ').strip()
 
-    def hello(self):
+    def hello(self):  # функция приветствия
         hour = int(datetime.datetime.now().hour)
 
-        if hour >= 4 & hour <= 12:
+        if hour >= 4 | hour <= 12:
             z = ["Доброе утро, чем могу быть полезна?", 'Что вам угодно?', 'Привет. Чем-нибудь помочь?']
             self.engine.say(random.choice(z))
-        elif hour >= 12 & hour <= 18:
+        elif hour >= 12 | hour <= 18:
             z = ["Добрый день, чем могу быть полезна?", 'Что вам угодно?', 'Привет. Чем-нибудь помочь?']
             x = random.choice(z)
             self.engine.say(x)
-        elif hour >= 18 & hour <= 23:
+        elif hour >= 18 | hour <= 23:
             z = ["Добрый вечер, чем могу быть полезна?", 'Что вам угодно?', 'Привет. Чем-нибудь помочь?']
             self.engine.say(random.choice(z))
         else:
@@ -197,12 +188,12 @@ class Assistant:
 
     #     'какая погода': , 'погода': weather_pogoda,
     #     'погода на улице': weather_pogoda, 'какая погода на улице': weather_pogoda,
-    def weather_pogoda(self, place):
-        self.engine.say("В городе " + str(place) + " сейчас " + str(self.status))
+    def weather_pogoda(self):
+        self.engine.say("В городе " + str(self.place) + " сейчас " + str(self.status))
         self.engine.say("Температура " + str(round(self.temp)) + " градусов по цельсию")
         self.engine.say("Влажность составляет " + str(self.humidity) + "%")
         self.engine.say("Скорость ветра " + str(self.w.wind()['speed']) + " метров в секунду")
-        print("В городе " + str(place) + " сейчас " + str(self.status))
+        print("В городе " + str(self.place) + " сейчас " + str(self.status))
         print("Температура " + str(round(self.temp)) + " градусов по цельсию")
         print("Влажность составляет " + str(self.humidity) + "%")
         print("Скорость ветра " + str(self.w.wind()['speed']) + " метров в секунду")
@@ -258,81 +249,85 @@ class Assistant:
         webbrowser.open(random.choice(k))
 
     def check_translate(self):
-        self.is_not_used()
+        text = ''
         tr = 0
         variants = ['переведи', 'перевести', 'переводить', 'перевод']
         for i in variants:
-            if (i in self.text) & (tr == 0):
-                word = self.text
+            if (i in text) & (tr == 0):
+                text = ''
+                word = text
                 word = word.replace('переведи', '').strip()
                 word = word.replace('перевести', '').strip()
                 word = word.replace('переводить', '').strip()
                 word = word.replace('перевод', '').strip()
                 word = word.replace('слово', '').strip()
                 word = word.replace('слова', '').strip()
-                webbrowser.open('https://translate.google.ru/#view=home&op=translate&sl=auto&tl=ru&text={}'.format(word)
-                                )
+                webbrowser.open('https://translate.google.ru/#view=home&op=translate&sl=auto&tl=ru&text={}'
+                                .format(word))
                 tr = 1
-                self.text = ''
-
-    cmds = {
-        'выруби компьютер': shut, 'выключи комп': shut, 'выключи компьютер': shut, 'выключай компьютер': shut,
-        'подбрось монетку': monetka, 'подкинь монетку': monetka, 'кинь монетку': monetka,
-        'найди': web_search, 'найти': web_search, 'ищи': web_search, 'кто такой': web_search,
-        'как дела': howyou, 'как жизнь': howyou, 'как настроение': howyou, 'как ты': howyou,
-        'открой viber': viber, 'включи viber': viber, 'открывай viber': viber,
-        'открой лаунчер аризоны': arz, 'запусти лаунчер аризоны': arz, 'запускай лаунчер аризоны': arz,
-        'включай лаунчер аризоны': arz, 'заходи на аризону': arz, 'включай аризону': arz,
-        'пока': quite, 'вырубись': quite, 'отключись': quite,
-        'покажи список команд': show_cmds,
-        'открой браузер': brows, 'открой интернет': brows,
-        'открой youtube': youtube, 'открой vk': ovk, 'включи vk': ovk,
-        'открой музыку': music, 'включи музон': music, 'вруби музыку': music,
-        'крути винилы': vinil, 'крути винил': vinil,
-        'планы': plans, 'на будущее': plans, 'что планируется': plans,
-        'переведи': check_translate,
-        'текущее время': timethis, 'сколько времени': timethis, 'сколько время': timethis,
-        'сейчас времени': timethis, 'который час': timethis,
-        'какая погода': weather_pogoda, 'погода': weather_pogoda, 'погода на улице': weather_pogoda,
-        'какая погода на улице': weather_pogoda,
-        'открой протокол разработки': protocol, 'протокол разработки': protocol,
-        'привет': hello, 'доброе утро': hello, 'добрый день': hello, 'добрый вечер': hello,
-    }
+                text = ''
+                k = ['Вот что мне удалось найти', 'Вот что я нашла по вашему запросу']
+                self.engine.say(random.choice(k))
 
     # распознавание
+
     def talk(self):
+        text = ''
+        print('Я вас слушаю: ')
         with sr.Microphone() as sourse:
-            print('Я вас слушаю: ')
             self.r.adjust_for_ambient_noise(sourse)
             audio = self.r.listen(sourse, phrase_time_limit=5)
             try:
-                self.text = (self.r.recognize_google(audio, language="ru-RU")).lower()
+                text = (self.r.recognize_google(audio, language="ru-RU")).lower()
             except sr.UnknownValueError:
                 pass
             except TypeError:
                 pass
-            # os.system('cls')
-            print(self.text)
-            self.clear_task()
+            os.system('cls')
+            print(text)
+            self.clear_task(text)
+            return text
 
     # выполнение команд
 
     def cmd_exe(self):
+        text = ''
+        cmds = {
+            'привет': self.hello,
+            ('выруби компьютер', 'выключай компьютер', 'выключи комп', 'выключи компьютер'): self.shut,
+            ('подбрось монетку', 'подкинь монетку', 'кинь монетку'): self.monetka,
+            ('найди', 'найти', 'ищи', 'кто такой'): self.web_search,
+            ('как дела', 'как жизнь', 'как настроение', 'как ты'): self.howyou,
+            ('открой viber', 'включи viber', 'открывай viber'): self.viber,
+            ('открой лаунчер аризоны', 'запусти лаунчер аризоны', 'запускай лаунчер аризоны'): self.arz,
+            ('включай лаунчер аризоны', 'заходи на аризону', 'включай аризону'): self.arz,
+            ('пока', 'вырубись', 'отключись'): self.quite,
+            'покажи список команд': self.show_cmds,
+            ('открой браузер', 'открой интернет'): self.brows,
+            'открой youtube': self.youtube,
+            ('открой vk', 'включи vk'): self.ovk,
+            ('открой музыку', 'включи музон', 'вруби музыку'): self.music,
+            ('крути винилы', 'крути винил'): self.vinil,
+            ('планы', 'на будущее', 'что планируется'): self.plans,
+            'переведи': self.check_translate,
+            ('текущее время', 'сколько времени', 'сколько время', 'сейчас времени', 'который час'): self.timethis,
+            ('какая погода', 'погода', 'погода на улице', 'какая погода на улице'): self.weather_pogoda,
+            ('открой протокол разработки', 'протокол разработки'): self.protocol,
+        }
         self.check_translate()
         self.web_search(),
-        text = self.comparison()
+        text = self.comparison(self, text)
         print(text)
-        if text in self.cmds:
-            if (text != 'пока') & (text != 'покажи список команд') \
+        if text in cmds:
+            if (text != 'привет') & (text != 'пока') & (text != 'покажи список команд') \
                     & (text != 'текущее время') & (text != 'сколько времени') \
                     & (text != 'сколько время') & (text != 'сейчас времени') & (text != 'который час') \
                     & (text != 'планы') & (text != 'какая погода') \
-                    & (text != 'привет') & (text != 'доброе утро') & (text != 'добрый день') & (text != 'добрый вечер')\
                     & (text != 'как дела') & (text != 'как жизнь') & (text != 'как настроение') & (text != 'как ты')\
                     & (text != 'погода') & (text != 'погода на улице') & (text != 'какая погода на улице'):
                 k = ['Секундочку', 'Сейчас сделаю', 'уже выполняю']
                 self.engine.say(random.choice(k))
-            self.cmds[text]()
+            cmds[text]()
         elif text == '':
             pass
         else:
@@ -343,19 +338,20 @@ class Assistant:
 
         self.engine.runAndWait()
         self.engine.stop()
+
     # исправляет цвет
 
     print(Fore.YELLOW + '', end='')
     os.system('cls')
-
     # основной бесконечный цикл
+
     def main(self):
+        text = ''
         try:
             self.talk()
-            if self.text != '':
+            if text != '':
                 self.cmd_exe()
                 self.talk()
-                self.j = 0
         except UnboundLocalError:
             pass
         except NameError:
@@ -367,10 +363,6 @@ class Assistant:
         except IndexError:
             pass
         except ValueError:
-            pass
-        except KeyError:
-            pass
-        except RecursionError:
             pass
 
 
